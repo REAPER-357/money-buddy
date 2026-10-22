@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en" class="dark" data-theme="black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Buddy - Financial Assistant</title>
+
+    <!-- PWA & Theme Integration -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js for clean responsive graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for clean iconography -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --accent-color: #10b981;
+            --page-bg: #000000;
+            --page-fg: #f1f5f9;
+            --panel-bg: #18181b;
+            --bar-bg: rgba(0, 0, 0, 0.95);
+            --nav-bg: #09090b;
+            --bar-border: #27272a;
+        }
+        [data-theme="dark"] {
+            --page-bg: #0f172a;
+            --panel-bg: #1e293b;
+            --bar-bg: rgba(15, 23, 42, 0.95);
+            --nav-bg: #020617;
+            --bar-border: #1e293b;
+        }
+        [data-theme="light"] {
+            --page-bg: #f1f5f9;
+            --page-fg: #1e293b;
+            --panel-bg: #ffffff;
+            --bar-bg: rgba(255, 255, 255, 0.95);
+            --nav-bg: #e2e8f0;
+            --bar-border: #cbd5e1;
+        }
+
+        body { background-color: var(--page-bg); color: var(--page-fg); }
+        .panel-bg { background-color: var(--panel-bg); }
+        .app-header { background-color: var(--bar-bg); border-color: var(--bar-border); }
+        .app-nav { background-color: var(--nav-bg); border-color: var(--bar-border); }
+        .tab-btn.active { border-color: var(--accent-color); }
+
+        .accent-text { color: var(--accent-color) !important; }
+        .accent-bg { background-color: var(--accent-color) !important; }
+        .accent-border { border-color: var(--accent-color) !important; }
+        input[type=range], input[type=checkbox] { accent-color: var(--accent-color); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Light theme: remap dark utility classes */
+        [data-theme="light"] .bg-black,
+        [data-theme="light"] .bg-black\/40,
+        [data-theme="light"] .bg-black\/50 { background-color: #f1f5f9; }
+        [data-theme="light"] .bg-zinc-800 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-zinc-900,
+        [data-theme="light"] .bg-zinc-900\/40 { background-color: #f8fafc; }
+        [data-theme="light"] .hover\:bg-zinc-700:hover { background-color: #cbd5e1; }
+        [data-theme="light"] .border-zinc-800,
+        [data-theme="light"] .border-zinc-700 { border-color: #cbd5e1; }
+        [data-theme="light"] .text-white:not(.accent-bg):not(.bg-red-600),
+        [data-theme="light"] .text-zinc-100,
+        [data-theme="light"] .text-zinc-200,
+        [data-theme="light"] .text-zinc-300 { color: #1e293b; }
+        [data-theme="light"] .text-zinc-400,
+        [data-theme="light"] .text-zinc-500,
+        [data-theme="light"] .text-zinc-600 { color: #64748b; }
+        [data-theme="light"] .accent-bg { color: #ffffff; }
+    </style>
+</head>
+<body id="appBody" class="min-h-screen flex flex-col font-sans transition-colors duration-200 select-none pb-12">
+
+    <!-- TOP HEADER -->
+    <header id="appHeader" class="app-header sticky top-0 z-30 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <img src="small-icon.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%2310b981\'/><text x=\'50%\' y=\'55%\' font-size=\'45\' text-anchor=\'middle\' fill=\'white\' font-family=\'sans-serif\' font-weight=\'bold\' dy=\'.3em\'>$</text></svg>'" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-zinc-700 shadow-sm" />
+            <div>
+                <h1 id="appTitleHeader" class="text-base font-bold tracking-tight leading-none text-emerald-400">MONEY BUDDY</h1>
+                <p class="text-[10px] text-zinc-400 font-medium">Financial Assistant</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button id="openSettingsBtn" aria-label="Open settings" class="p-2.5 rounded-xl text-zinc-300 hover:bg-zinc-800/50 transition">
+                <i class="fa-solid fa-gear text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav id="appNav" class="app-nav border-b px-4 pt-2">
+        <div class="flex space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar max-w-4xl mx-auto" id="navTabs">
+            <button data-tab="converter" class="tab-btn active px-3.5 py-2.5 text-xs font-semibold rounded-t-lg border-b-2 accent-text flex items-center space-x-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-calculator"></i> <span>Converter</span>
+            </button>
+            <button data-tab="utilities" class="tab-btn px-3.5 py-2.5 text-xs font-medium rounded-t-lg text-zinc-400 hover:text-zinc-200 flex items-center space-x-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-bolt"></i> <span>Utilities</span>
+            </button>
+            <button data-tab="expenses" class="tab-btn px-3.5 py-2.5 text-xs font-medium rounded-t-lg text-zinc-400 hover:text-zinc-200 flex items-center space-x-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-wallet"></i> <span>Expenses & Savings</span>
+            </button>
+            <button data-tab="subscriptions" class="tab-btn px-3.5 py-2.5 text-xs font-medium rounded-t-lg text-zinc-400 hover:text-zinc-200 flex items-center space-x-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-calendar-check"></i> <span>Subscriptions</span>
+            </button>
+            <button data-tab="debt" class="tab-btn px-3.5 py-2.5 text-xs font-medium rounded-t-lg text-zinc-400 hover:text-zinc-200 flex items-center space-x-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-hand-holding-dollar"></i> <span>Debt Tracker</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] hidden px-4 py-2 rounded-xl bg-zinc-800 text-zinc-100 text-xs font-medium shadow-xl border border-zinc-700 max-w-[90vw] text-center"></div>
+
+    <!-- MAIN VIEW AREA -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-4">
+
+        <!-- 1ST TAB: CURRENCY CONVERTER -->
+        <section id="view-converter" class="tab-view space-y-4">
+            <div class="panel-bg p-5 rounded-3xl border border-zinc-800 shadow-lg space-y-4">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <h2 class="text-sm font-bold text-zinc-100">Live Currency Converter</h2>
+                    <span id="ratesLastUpdated" class="text-[10px] text-zinc-500">Fetching live rates...</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                    <!-- From Currency -->
+                    <div class="bg-black/40 p-3.5 rounded-2xl border border-zinc-800 space-y-2">
+                        <label class="text-[11px] font-semibold text-zinc-400">Amount</label>
+                        <input type="number" id="convAmount" value="100" min="0" step="any" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white font-bold focus:outline-none focus:border-emerald-500">
+                        <select id="convFrom" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="KHR">KHR - Cambodian Riel</option>
+                            <option value="CAD">CAD - Canadian Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="GBP">GBP - British Pound</option>
+                            <option value="AUD">AUD - Australian Dollar</option>
+                            <option value="THB">THB - Thai Baht</option>
+                            <option value="JPY">JPY - Japanese Yen</option>
+                        </select>
+                    </div>
+
+                    <!-- Swap Button & Result -->
+                    <div class="bg-black/40 p-3.5 rounded-2xl border border-zinc-800 space-y-2 relative">
+                        <button id="btnSwapCurrency" title="Swap currencies" class="absolute -top-3 left-1/2 -translate-x-1/2 sm:top-1/2 sm:-left-3 sm:-translate-y-1/2 w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 flex items-center justify-center text-xs transition">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+
+                        <label class="text-[11px] font-semibold text-zinc-400">Converted Amount</label>
+                        <div id="convResult" class="w-full bg-black/60 border border-zinc-800 rounded-xl px-3 py-2 text-base accent-text font-extrabold truncate">
+                            0.00
+                        </div>
+                        <select id="convTo" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500">
+                            <option value="KHR" selected>KHR - Cambodian Riel</option>
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="CAD">CAD - Canadian Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="GBP">GBP - British Pound</option>
+                            <option value="AUD">AUD - Australian Dollar</option>
+                            <option value="THB">THB - Thai Baht</option>
+                            <option value="JPY">JPY - Japanese Yen</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <button id="btnRefreshRates" class="text-xs font-semibold accent-text hover:underline flex items-center space-x-1 ml-auto">
+                        <i class="fa-solid fa-arrows-rotate"></i> <span>Refresh Rates</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2ND TAB: UTILITIES TRACKER -->
+        <section id="view-utilities" class="tab-view hidden space-y-4">
+            <!-- Graph Box -->
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-zinc-100">12-Month Utility Consumption & Costs</h2>
+                    <div class="text-[10px] flex items-center space-x-3 font-semibold">
+                        <span class="text-yellow-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Power (kWh)</span>
+                        <span class="text-blue-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Water (m³)</span>
+                        <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Total Cost ($)</span>
+                    </div>
+                </div>
+                <div class="h-56 relative w-full">
+                    <canvas id="utilityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly Utility Inputs -->
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-3">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                    <h2 class="text-sm font-bold text-zinc-100">Monthly Meter Readings</h2>
+                    <span class="text-[11px] text-zinc-400">Rates in Settings: Power <b id="powerRateDisp" class="accent-text">$0.25</b>/kWh, Water <b id="waterRateDisp" class="accent-text">$0.60</b>/m³</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-zinc-800 text-zinc-400">
+                                <th class="pb-2">Month</th>
+                                <th class="pb-2">Power (kWh Meter)</th>
+                                <th class="pb-2">Water (m³ Meter)</th>
+                                <th class="pb-2">Used (kWh / m³)</th>
+                                <th class="pb-2 text-right">Total Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="utilityTableBody" class="divide-y divide-zinc-800/60">
+                            <!-- JS Generated Rows for 12 months -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3RD TAB: MONTHLY EXPENSES & SAVINGS -->
+        <section id="view-expenses" class="tab-view hidden space-y-4">
+            <!-- Expenses vs Savings Graph -->
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-zinc-100">12-Month Expenses vs Savings</h2>
+                    <div class="text-[10px] flex items-center space-x-3 font-semibold">
+                        <span class="text-red-500"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Expenses ($)</span>
+                        <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Savings ($)</span>
+                    </div>
+                </div>
+                <div class="h-56 relative w-full">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly Income & Budget Overview -->
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+                    <div>
+                        <h2 class="text-sm font-bold text-zinc-100">Monthly Budget & Salary</h2>
+                        <p class="text-[11px] text-zinc-400">Track monthly earnings, expenses, and savings deposits</p>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs">
+                        <label class="flex items-center space-x-2 text-zinc-300 cursor-pointer">
+                            <input type="checkbox" id="fixedSalaryCheck" checked class="w-4 h-4 rounded cursor-pointer">
+                            <span>Fixed Monthly Salary</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Salary Input Row -->
+                <div id="fixedSalaryBox" class="bg-black/40 p-3 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <span class="text-xs font-semibold text-zinc-300">Default Monthly Income:</span>
+                    <div class="flex items-center space-x-1">
+                        <span class="text-xs accent-text font-bold">$</span>
+                        <input type="number" id="fixedSalaryInput" value="2500" min="0" step="any" class="w-28 bg-black border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <!-- Expense Items Manager -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-zinc-200">Recurring Expense Categories</h3>
+                        <button id="btnAddExpenseCat" class="accent-bg text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow transition flex items-center space-x-1">
+                            <i class="fa-solid fa-plus"></i> <span>Add Expense</span>
+                        </button>
+                    </div>
+
+                    <div id="expenseCategoriesList" class="space-y-2">
+                        <!-- Dynamic list of expense items -->
+                    </div>
+                </div>
+
+                <!-- 12-Month Table summary -->
+                <div class="border-t border-zinc-800 pt-3">
+                    <h3 class="text-xs font-bold text-zinc-200 mb-2">12-Month Savings Records</h3>
+                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-zinc-800 text-zinc-400">
+                                    <th class="pb-2">Month</th>
+                                    <th class="pb-2">Income</th>
+                                    <th class="pb-2">Expenses</th>
+                                    <th class="pb-2">Net Remaining</th>
+                                    <th class="pb-2 text-right">Added to Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expensesTableBody" class="divide-y divide-zinc-800/60">
+                                <!-- 12 month rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4TH TAB: SUBSCRIPTIONS TRACKER -->
+        <section id="view-subscriptions" class="tab-view hidden space-y-4">
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-4">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <div>
+                        <h2 class="text-sm font-bold text-zinc-100">Recurring Subscriptions & Services</h2>
+                        <p class="text-[11px] text-zinc-400">Monthly fixed burn rate: <b id="subMonthlyTotal" class="accent-text">$0.00</b></p>
+                    </div>
+                    <button id="btnAddSubscription" class="accent-bg text-white text-xs font-semibold px-3 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus"></i> <span>New Subscription</span>
+                    </button>
+                </div>
+
+                <div id="subscriptionsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Dynamic subscriptions list -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 5TH TAB: DEBT / LOAN PAYOFF TRACKER -->
+        <section id="view-debt" class="tab-view hidden space-y-4">
+            <!-- Debt 12-Month Progress Graph -->
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-zinc-100">12-Month Debt Payoff Progress</h2>
+                    <div class="text-[10px] flex items-center space-x-3 font-semibold">
+                        <span class="text-blue-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Remaining Balance ($)</span>
+                        <span class="text-emerald-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Cumulative Paid ($)</span>
+                    </div>
+                </div>
+                <div class="h-56 relative w-full">
+                    <canvas id="debtChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Active Loans Setup -->
+            <div class="panel-bg p-4 rounded-3xl border border-zinc-800 shadow-lg space-y-4">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <div>
+                        <h2 class="text-sm font-bold text-zinc-100">Active Loans & Liabilities</h2>
+                        <p class="text-[11px] text-zinc-400">Total remaining debt: <b id="totalDebtRemaining" class="text-red-400">$0.00</b></p>
+                    </div>
+                    <button id="btnAddDebt" class="accent-bg text-white text-xs font-semibold px-3 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus"></i> <span>Add Debt/Loan</span>
+                    </button>
+                </div>
+
+                <div id="debtList" class="space-y-3">
+                    <!-- Dynamic debt list -->
+                </div>
+
+                <!-- 12-Month Monthly Payoff Log Table -->
+                <div class="border-t border-zinc-800 pt-3">
+                    <h3 class="text-xs font-bold text-zinc-200 mb-2">12-Month Debt Payment Log</h3>
+                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="border-b border-zinc-800 text-zinc-400">
+                                    <th class="pb-2">Month</th>
+                                    <th class="pb-2">Total Monthly Payment ($)</th>
+                                    <th class="pb-2">Cumulative Paid ($)</th>
+                                    <th class="pb-2 text-right">Remaining Total Balance ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="debtTableBody" class="divide-y divide-zinc-800/60">
+                                <!-- 12 month rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER SIGNATURE -->
+    <div class="fixed bottom-1 left-0 right-0 z-10 text-center pointer-events-none">
+        <p class="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">
+            Made by REAPER-357
+        </p>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="panel-bg w-full max-w-sm rounded-3xl p-6 border border-zinc-800 shadow-2xl space-y-5 text-center relative max-h-[90vh] overflow-y-auto">
+            <button class="closeModalBtn absolute top-4 right-4 text-zinc-400 hover:text-white text-lg" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Centered Big Icon -->
+            <img src="icon.png" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'50\' fill=\'%2310b981\'/><text x=\'50%\' y=\'55%\' font-size=\'45\' text-anchor=\'middle\' fill=\'white\' font-family=\'sans-serif\' font-weight=\'bold\' dy=\'.3em\'>$</text></svg>'" alt="Money Buddy Logo" class="w-32 h-32 mx-auto rounded-2xl object-cover border-2 border-zinc-700 shadow-lg mb-2" />
+
+            <h3 class="text-base font-bold text-white">Money Buddy Settings</h3>
+            <p class="text-xs text-zinc-400">Configure rates, themes, and accents</p>
+
+            <!-- Utility Rates Settings -->
+            <div class="bg-black/50 p-3 rounded-2xl border border-zinc-800 space-y-3 text-left">
+                <span class="text-xs font-semibold text-zinc-300 block border-b border-zinc-800 pb-1">Utility Rates Settings</span>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="text-[10px] text-zinc-400">Power Rate ($/kWh)</label>
+                        <input type="number" id="settingPowerRate" value="0.25" step="0.01" class="w-full bg-black border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-zinc-400">Water Rate ($/m³)</label>
+                        <input type="number" id="settingWaterRate" value="0.60" step="0.01" class="w-full bg-black border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme Picker -->
+            <div class="bg-black/50 p-3 rounded-2xl border border-zinc-800 space-y-2 text-left">
+                <span class="text-xs font-semibold text-zinc-300">App Background Theme</span>
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                    <button onclick="setAppTheme('black')" id="themeBtn-black" class="py-1.5 px-2 rounded-xl text-xs font-medium bg-zinc-900 border border-zinc-700 text-white transition">Pure Black</button>
+                    <button onclick="setAppTheme('dark')" id="themeBtn-dark" class="py-1.5 px-2 rounded-xl text-xs font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 transition">Dark</button>
+                    <button onclick="setAppTheme('light')" id="themeBtn-light" class="py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-200 border border-slate-300 text-slate-800 transition">Light</button>
+                </div>
+            </div>
+
+            <!-- Accent Picker -->
+            <div class="bg-black/50 p-3 rounded-2xl border border-zinc-800 space-y-2 text-left">
+                <span class="text-xs font-semibold text-zinc-300">Accent Color</span>
+                <div class="flex items-center justify-around pt-2">
+                    <button aria-label="Green accent" onclick="setAccentColor('#10b981')" class="w-7 h-7 rounded-full bg-emerald-500 hover:scale-110 transition-transform shadow"></button>
+                    <button aria-label="Red accent" onclick="setAccentColor('#ef4444')" class="w-7 h-7 rounded-full bg-red-500 hover:scale-110 transition-transform shadow"></button>
+                    <button aria-label="Blue accent" onclick="setAccentColor('#3b82f6')" class="w-7 h-7 rounded-full bg-blue-500 hover:scale-110 transition-transform shadow"></button>
+                    <button aria-label="Purple accent" onclick="setAccentColor('#a855f7')" class="w-7 h-7 rounded-full bg-purple-500 hover:scale-110 transition-transform shadow"></button>
+                    <button aria-label="Amber accent" onclick="setAccentColor('#f59e0b')" class="w-7 h-7 rounded-full bg-amber-500 hover:scale-110 transition-transform shadow"></button>
+                </div>
+            </div>
+
+            <div class="text-center pt-1">
+                <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Designed by REAPER-357</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD SUBSCRIPTION MODAL -->
+    <div id="subModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="panel-bg w-full max-w-sm rounded-3xl p-6 border border-zinc-800 shadow-2xl space-y-4 text-left">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 class="text-base font-bold text-white">Add Subscription</h3>
+                <button class="closeModalBtn text-zinc-400 hover:text-white text-lg" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold mb-1 text-zinc-300">Service Name</label>
+                    <input type="text" id="subNameInput" placeholder="e.g. Netflix, Internet" class="w-full px-3 py-2 bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1 text-zinc-300">Cost ($)</label>
+                    <input type="number" id="subCostInput" placeholder="15.00" step="0.01" class="w-full px-3 py-2 bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1 text-zinc-300">Billing Cycle</label>
+                    <select id="subCycleInput" class="w-full px-3 py-2 bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-emerald-500">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button class="closeModalBtn px-4 py-2 text-xs font-semibold bg-zinc-800 rounded-xl hover:bg-zinc-700 text-white transition">Cancel</button>
+                <button id="btnSaveSub" class="px-4 py-2 text-xs font-semibold accent-bg text-white rounded-xl shadow-md transition">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD DEBT MODAL -->
+    <div id="debtModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="panel-bg w-full max-w-sm rounded-3xl p-6 border border-zinc-800 shadow-2xl space-y-4 text-left">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 class="text-base font-bold text-white">Add Loan / Debt</h3>
+                <button class="closeModalBtn text-zinc-400 hover:text-white text-lg" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold mb-1 text-zinc-300">Loan / Debt Name</label>
+                    <input type="text" id="debtNameInput" placeholder="e.g. Car Loan, Credit Card" class="w-full px-3 py-2 bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block font-semibold mb-1 text-zinc-300">Initial Principal Balance ($)</label>
+                    <input type="number" id="debtBalanceInput" placeholder="5000" step="any" class="w-full px-3 py-2 bg-black border border-zinc-800 rounded-xl text-white focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button class="closeModalBtn px-4 py-2 text-xs font-semibold bg-zinc-800 rounded-xl hover:bg-zinc-700 text-white transition">Cancel</button>
+                <button id="btnSaveDebt" class="px-4 py-2 text-xs font-semibold accent-bg text-white rounded-xl shadow-md transition">Save Debt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC SCRIPT -->
+    <script>
+        const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        /* ---------- State & LocalStorage ---------- */
+        function safeParse(key, fallback) {
+            try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; }
+        }
+
+        let utilityData = safeParse('mb_utility_data', Array(12).fill(0).map(() => ({ power: 0, water: 0 })));
+        let utilityRates = safeParse('mb_utility_rates', { power: 0.25, water: 0.60 });
+        
+        let expenseCategories = safeParse('mb_expense_cats', [
+            { id: 'cat1', name: 'Rent / Mortgage', amount: 800 },
+            { id: 'cat2', name: 'Groceries', amount: 350 },
+            { id: 'cat3', name: 'Dining & Entertainment', amount: 200 }
+        ]);
+
+        let budgetData = safeParse('mb_budget_data', {
+            isFixed: true,
+            fixedSalary: 2500,
+            monthlySalary: Array(12).fill(2500),
+            monthlySavings: Array(12).fill(500)
+        });
+
+        let subscriptions = safeParse('mb_subscriptions', [
+            { id: 's1', name: 'Netflix', cost: 15.49, cycle: 'monthly' },
+            { id: 's2', name: 'Home Fiber Internet', cost: 35.00, cycle: 'monthly' }
+        ]);
+
+        let debts = safeParse('mb_debts', [
+            { id: 'd1', name: 'Motorcycle / Car Loan', initialBalance: 3000 }
+        ]);
+
+        let debtPayments = safeParse('mb_debt_payments', Array(12).fill(150));
+
+        let exchangeRates = { KHR: 4100, CAD: 1.35, EUR: 0.92, GBP: 0.79, AUD: 1.52, THB: 36.5, JPY: 155.0, USD: 1.0 };
+
+        /* ---------- UI Elements ---------- */
+        const toastEl = document.getElementById('toast');
+        const settingsModal = document.getElementById('settingsModal');
+        const openSettingsBtn = document.getElementById('openSettingsBtn');
+        let utilityChart = null;
+        let expenseChart = null;
+        let debtChart = null;
+
+        /* ---------- Helpers ---------- */
+        let toastTimer = null;
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.remove('hidden');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 2600);
+        }
+
+        /* ---------- Theme & Accent ---------- */
+        function setAccentColor(hex) {
+            localStorage.setItem('mb_accent_color', hex);
+            document.documentElement.style.setProperty('--accent-color', hex);
+            document.getElementById('appTitleHeader').style.color = hex;
+        }
+
+        function setAppTheme(theme) {
+            if (!['black', 'dark', 'light'].includes(theme)) theme = 'black';
+            localStorage.setItem('mb_app_theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.classList.toggle('dark', theme !== 'light');
+        }
+
+        function initPreferences() {
+            setAccentColor(localStorage.getItem('mb_accent_color') || '#10b981');
+            setAppTheme(localStorage.getItem('mb_app_theme') || 'black');
+        }
+
+        /* ---------- Init ---------- */
+        window.addEventListener('DOMContentLoaded', () => {
+            initPreferences();
+            setupTabNavigation();
+            setupCurrencyConverter();
+            initSettings();
+            renderUtilities();
+            renderExpenses();
+            renderSubscriptions();
+            renderDebts();
+        });
+
+        /* ---------- Navigation ---------- */
+        function setupTabNavigation() {
+            const tabs = document.querySelectorAll('#navTabs button');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => {
+                        t.classList.remove('active', 'border-b-2', 'accent-text', 'font-semibold');
+                        t.classList.add('text-zinc-400', 'font-medium');
+                    });
+                    tab.classList.add('active', 'border-b-2', 'accent-text', 'font-semibold');
+                    tab.classList.remove('text-zinc-400', 'font-medium');
+
+                    const target = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
+                    document.getElementById(`view-${target}`).classList.remove('hidden');
+
+                    if (target === 'utilities' && utilityChart) utilityChart.resize();
+                    if (target === 'expenses' && expenseChart) expenseChart.resize();
+                    if (target === 'debt' && debtChart) debtChart.resize();
+                });
+            });
+        }
+
+        /* ---------- Tab 1: Live Currency Converter ---------- */
+        function setupCurrencyConverter() {
+            const convAmount = document.getElementById('convAmount');
+            const convFrom = document.getElementById('convFrom');
+            const convTo = document.getElementById('convTo');
+            const convResult = document.getElementById('convResult');
+            const btnSwap = document.getElementById('btnSwapCurrency');
+            const btnRefresh = document.getElementById('btnRefreshRates');
+
+            function calculate() {
+                const amt = parseFloat(convAmount.value) || 0;
+                const from = convFrom.value;
+                const to = convTo.value;
+
+                // convert via USD base
+                const inUsd = amt / (exchangeRates[from] || 1);
+                const out = inUsd * (exchangeRates[to] || 1);
+
+                convResult.innerText = `${out.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${to}`;
+            }
+
+            async function fetchRates() {
+                try {
+                    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.rates) {
+                            exchangeRates = { ...exchangeRates, ...data.rates };
+                            document.getElementById('ratesLastUpdated').innerText = `Updated ${new Date().toLocaleTimeString()}`;
+                            calculate();
+                        }
+                    }
+                } catch(e) {
+                    document.getElementById('ratesLastUpdated').innerText = `Offline rates`;
+                }
+            }
+
+            convAmount.addEventListener('input', calculate);
+            convFrom.addEventListener('change', calculate);
+            convTo.addEventListener('change', calculate);
+
+            btnSwap.addEventListener('click', () => {
+                const tmp = convFrom.value;
+                convFrom.value = convTo.value;
+                convTo.value = tmp;
+                calculate();
+            });
+
+            btnRefresh.addEventListener('click', () => {
+                fetchRates();
+                showToast('Exchange rates updated');
+            });
+
+            fetchRates();
+        }
+
+        /* ---------- Tab 2: Utilities Tracker & Charts ---------- */
+        function renderUtilities() {
+            document.getElementById('powerRateDisp').innerText = `$${utilityRates.power.toFixed(2)}`;
+            document.getElementById('waterRateDisp').innerText = `$${utilityRates.water.toFixed(2)}`;
+
+            const tbody = document.getElementById('utilityTableBody');
+            tbody.innerHTML = '';
+
+            let pUsed = [], wUsed = [], totalCosts = [];
+
+            MONTHS.forEach((m, idx) => {
+                const curr = utilityData[idx] || { power: 0, water: 0 };
+                const prev = idx > 0 ? (utilityData[idx - 1] || { power: 0, water: 0 }) : { power: curr.power, water: curr.water };
+
+                const pDiff = Math.max(0, curr.power - prev.power);
+                const wDiff = Math.max(0, curr.water - prev.water);
+
+                const cost = (pDiff * utilityRates.power) + (wDiff * utilityRates.water);
+
+                pUsed.push(pDiff);
+                wUsed.push(wDiff);
+                totalCosts.push(cost);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-zinc-800/30 transition";
+                tr.innerHTML = `
+                    <td class="py-2.5 font-bold text-zinc-300">${m}</td>
+                    <td class="py-2.5">
+                        <input type="number" value="${curr.power || ''}" placeholder="kWh" onchange="updateUtilityRecord(${idx}, 'power', this.value)" class="w-20 bg-black/60 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </td>
+                    <td class="py-2.5">
+                        <input type="number" value="${curr.water || ''}" placeholder="m³" onchange="updateUtilityRecord(${idx}, 'water', this.value)" class="w-20 bg-black/60 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </td>
+                    <td class="py-2.5 text-zinc-400 font-mono">${pDiff} kWh / ${wDiff} m³</td>
+                    <td class="py-2.5 text-right font-bold accent-text">$${cost.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderUtilityChart(pUsed, wUsed, totalCosts);
+        }
+
+        window.updateUtilityRecord = function(idx, field, val) {
+            utilityData[idx][field] = parseFloat(val) || 0;
+            localStorage.setItem('mb_utility_data', JSON.stringify(utilityData));
+            renderUtilities();
+        };
+
+        function renderUtilityChart(pData, wData, cData) {
+            const ctx = document.getElementById('utilityChart').getContext('2d');
+            if (utilityChart) utilityChart.destroy();
+
+            utilityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: MONTHS,
+                    datasets: [
+                        { label: 'Power (kWh)', data: pData, borderColor: '#facc15', backgroundColor: '#facc1520', tension: 0.3, yAxisID: 'y' },
+                        { label: 'Water (m³)', data: wData, borderColor: '#60a5fa', backgroundColor: '#60a5fa20', tension: 0.3, yAxisID: 'y' },
+                        { label: 'Total Cost ($)', data: cData, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.3, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+                        y: { position: 'left', grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+                        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10b981', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        /* ---------- Tab 3: Expenses & Savings ---------- */
+        function renderExpenses() {
+            const fixedCheck = document.getElementById('fixedSalaryCheck');
+            const fixedInput = document.getElementById('fixedSalaryInput');
+            fixedCheck.checked = budgetData.isFixed;
+            fixedInput.value = budgetData.fixedSalary;
+
+            fixedCheck.onchange = () => {
+                budgetData.isFixed = fixedCheck.checked;
+                localStorage.setItem('mb_budget_data', JSON.stringify(budgetData));
+                renderExpenses();
+            };
+
+            fixedInput.oninput = () => {
+                budgetData.fixedSalary = parseFloat(fixedInput.value) || 0;
+                localStorage.setItem('mb_budget_data', JSON.stringify(budgetData));
+                renderExpenses();
+            };
+
+            const totalCategoryExpense = expenseCategories.reduce((acc, c) => acc + c.amount, 0);
+
+            const catContainer = document.getElementById('expenseCategoriesList');
+            catContainer.innerHTML = '';
+            expenseCategories.forEach(cat => {
+                const row = document.createElement('div');
+                row.className = "bg-black/40 p-2.5 rounded-2xl border border-zinc-800 flex items-center justify-between text-xs";
+                row.innerHTML = `
+                    <span class="font-semibold text-zinc-300">${cat.name}</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-zinc-400">$</span>
+                        <input type="number" value="${cat.amount}" onchange="updateExpenseCat('${cat.id}', this.value)" class="w-24 bg-black border border-zinc-800 rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <button onclick="deleteExpenseCat('${cat.id}')" class="text-zinc-500 hover:text-red-500 p-1 transition"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+                catContainer.appendChild(row);
+            });
+
+            const tbody = document.getElementById('expensesTableBody');
+            tbody.innerHTML = '';
+
+            let monthlyExpensesArr = [], monthlySavingsArr = [];
+
+            MONTHS.forEach((m, idx) => {
+                const inc = budgetData.isFixed ? budgetData.fixedSalary : (budgetData.monthlySalary[idx] || 0);
+                const utilCost = utilityData[idx] ? ((Math.max(0, utilityData[idx].power - (idx > 0 ? utilityData[idx-1].power : utilityData[idx].power)) * utilityRates.power) + (Math.max(0, utilityData[idx].water - (idx > 0 ? utilityData[idx-1].water : utilityData[idx].water)) * utilityRates.water)) : 0;
+                
+                const totalExp = totalCategoryExpense + utilCost;
+                const net = inc - totalExp;
+                const sav = budgetData.monthlySavings[idx] || 0;
+
+                monthlyExpensesArr.push(totalExp);
+                monthlySavingsArr.push(sav);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-zinc-800/30 transition";
+                tr.innerHTML = `
+                    <td class="py-2.5 font-bold text-zinc-300">${m}</td>
+                    <td class="py-2.5">
+                        ${budgetData.isFixed ? `$${inc.toFixed(0)}` : `<input type="number" value="${inc}" onchange="updateMonthlyInc(${idx}, this.value)" class="w-20 bg-black/60 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white">`}
+                    </td>
+                    <td class="py-2.5 text-red-400 font-semibold">$${totalExp.toFixed(2)}</td>
+                    <td class="py-2.5 font-bold ${net >= 0 ? 'accent-text' : 'text-red-500'}">$${net.toFixed(2)}</td>
+                    <td class="py-2.5 text-right">
+                        <input type="number" value="${sav}" onchange="updateMonthlySav(${idx}, this.value)" class="w-20 bg-black/60 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white text-right">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderExpenseChart(monthlyExpensesArr, monthlySavingsArr);
+        }
+
+        window.updateExpenseCat = function(id, val) {
+            const cat = expenseCategories.find(c => c.id === id);
+            if (cat) cat.amount = parseFloat(val) || 0;
+            localStorage.setItem('mb_expense_cats', JSON.stringify(expenseCategories));
+            renderExpenses();
+        };
+
+        window.deleteExpenseCat = function(id) {
+            expenseCategories = expenseCategories.filter(c => c.id !== id);
+            localStorage.setItem('mb_expense_cats', JSON.stringify(expenseCategories));
+            renderExpenses();
+        };
+
+        document.getElementById('btnAddExpenseCat').onclick = () => {
+            const name = prompt('Expense Category Name (e.g. Internet, Dining):');
+            if (!name) return;
+            expenseCategories.push({ id: 'cat_' + Date.now(), name, amount: 0 });
+            localStorage.setItem('mb_expense_cats', JSON.stringify(expenseCategories));
+            renderExpenses();
+        };
+
+        window.updateMonthlyInc = function(idx, val) {
+            budgetData.monthlySalary[idx] = parseFloat(val) || 0;
+            localStorage.setItem('mb_budget_data', JSON.stringify(budgetData));
+            renderExpenses();
+        };
+
+        window.updateMonthlySav = function(idx, val) {
+            budgetData.monthlySavings[idx] = parseFloat(val) || 0;
+            localStorage.setItem('mb_budget_data', JSON.stringify(budgetData));
+            renderExpenses();
+        };
+
+        function renderExpenseChart(eData, sData) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            if (expenseChart) expenseChart.destroy();
+
+            expenseChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: MONTHS,
+                    datasets: [
+                        { label: 'Expenses ($)', data: eData, borderColor: '#ef4444', backgroundColor: '#ef444420', tension: 0.3 },
+                        { label: 'Savings ($)', data: sData, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+                        y: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        /* ---------- Tab 4: Subscriptions Tracker ---------- */
+        function renderSubscriptions() {
+            const container = document.getElementById('subscriptionsList');
+            container.innerHTML = '';
+
+            let monthlyTotal = 0;
+
+            subscriptions.forEach(sub => {
+                const monthlyCost = sub.cycle === 'yearly' ? (sub.cost / 12) : sub.cost;
+                monthlyTotal += monthlyCost;
+
+                const card = document.createElement('div');
+                card.className = "bg-black/40 p-3.5 rounded-2xl border border-zinc-800 flex items-center justify-between text-xs";
+                card.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-zinc-100">${sub.name}</h4>
+                        <span class="text-[10px] text-zinc-400 uppercase font-mono">${sub.cycle}</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="font-extrabold accent-text text-sm">$${sub.cost.toFixed(2)}</span>
+                        <button onclick="deleteSubscription('${sub.id}')" class="text-zinc-500 hover:text-red-500 transition p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('subMonthlyTotal').innerText = `$${monthlyTotal.toFixed(2)}`;
+        }
+
+        const subModal = document.getElementById('subModal');
+        document.getElementById('btnAddSubscription').onclick = () => subModal.classList.remove('hidden');
+
+        document.getElementById('btnSaveSub').onclick = () => {
+            const name = document.getElementById('subNameInput').value.trim();
+            const cost = parseFloat(document.getElementById('subCostInput').value) || 0;
+            const cycle = document.getElementById('subCycleInput').value;
+
+            if (!name) return alert('Enter service name');
+
+            subscriptions.push({ id: 'sub_' + Date.now(), name, cost, cycle });
+            localStorage.setItem('mb_subscriptions', JSON.stringify(subscriptions));
+            subModal.classList.add('hidden');
+            renderSubscriptions();
+        };
+
+        window.deleteSubscription = function(id) {
+            subscriptions = subscriptions.filter(s => s.id !== id);
+            localStorage.setItem('mb_subscriptions', JSON.stringify(subscriptions));
+            renderSubscriptions();
+        };
+
+        /* ---------- Tab 5: Debt / Loan Payoff Tracker ---------- */
+        function renderDebts() {
+            const container = document.getElementById('debtList');
+            container.innerHTML = '';
+
+            const totalInitialDebt = debts.reduce((sum, d) => sum + d.initialBalance, 0);
+
+            debts.forEach(d => {
+                const card = document.createElement('div');
+                card.className = "bg-black/40 p-3.5 rounded-2xl border border-zinc-800 flex items-center justify-between text-xs";
+                card.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-zinc-100">${d.name}</h4>
+                        <span class="text-[10px] text-zinc-400">Initial Principal</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="font-extrabold text-red-400 text-sm">$${d.initialBalance.toFixed(2)}</span>
+                        <button onclick="deleteDebt('${d.id}')" class="text-zinc-500 hover:text-red-500 transition p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            const tbody = document.getElementById('debtTableBody');
+            tbody.innerHTML = '';
+
+            let runningBalance = totalInitialDebt;
+            let cumulativePaid = 0;
+            let remainingBalancesArr = [];
+            let cumulativePaidArr = [];
+
+            MONTHS.forEach((m, idx) => {
+                const payment = debtPayments[idx] || 0;
+                cumulativePaid += payment;
+                runningBalance = Math.max(0, runningBalance - payment);
+
+                remainingBalancesArr.push(runningBalance);
+                cumulativePaidArr.push(cumulativePaid);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-zinc-800/30 transition";
+                tr.innerHTML = `
+                    <td class="py-2.5 font-bold text-zinc-300">${m}</td>
+                    <td class="py-2.5">
+                        <input type="number" value="${payment || ''}" placeholder="$0" onchange="updateDebtPayment(${idx}, this.value)" class="w-24 bg-black/60 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </td>
+                    <td class="py-2.5 accent-text font-semibold">$${cumulativePaid.toFixed(2)}</td>
+                    <td class="py-2.5 text-right font-bold text-red-400">$${runningBalance.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totalDebtRemaining').innerText = `$${runningBalance.toFixed(2)}`;
+            renderDebtChart(remainingBalancesArr, cumulativePaidArr);
+        }
+
+        window.updateDebtPayment = function(idx, val) {
+            debtPayments[idx] = parseFloat(val) || 0;
+            localStorage.setItem('mb_debt_payments', JSON.stringify(debtPayments));
+            renderDebts();
+        };
+
+        const debtModal = document.getElementById('debtModal');
+        document.getElementById('btnAddDebt').onclick = () => debtModal.classList.remove('hidden');
+
+        document.getElementById('btnSaveDebt').onclick = () => {
+            const name = document.getElementById('debtNameInput').value.trim();
+            const balance = parseFloat(document.getElementById('debtBalanceInput').value) || 0;
+
+            if (!name) return alert('Enter debt name');
+
+            debts.push({ id: 'debt_' + Date.now(), name, initialBalance: balance });
+            localStorage.setItem('mb_debts', JSON.stringify(debts));
+            debtModal.classList.add('hidden');
+            renderDebts();
+        };
+
+        window.deleteDebt = function(id) {
+            debts = debts.filter(d => d.id !== id);
+            localStorage.setItem('mb_debts', JSON.stringify(debts));
+            renderDebts();
+        };
+
+        function renderDebtChart(balanceData, paidData) {
+            const ctx = document.getElementById('debtChart').getContext('2d');
+            if (debtChart) debtChart.destroy();
+
+            debtChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: MONTHS,
+                    datasets: [
+                        { label: 'Remaining Balance ($)', data: balanceData, borderColor: '#60a5fa', backgroundColor: '#60a5fa20', tension: 0.3 },
+                        { label: 'Cumulative Paid ($)', data: paidData, borderColor: '#10b981', backgroundColor: '#10b98120', tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+                        y: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        /* ---------- Settings Modal ---------- */
+        function initSettings() {
+            openSettingsBtn.onclick = () => settingsModal.classList.remove('hidden');
+
+            document.querySelectorAll('.closeModalBtn').forEach(b => {
+                b.onclick = () => {
+                    settingsModal.classList.add('hidden');
+                    subModal.classList.add('hidden');
+                    debtModal.classList.add('hidden');
+                };
+            });
+
+            const pRate = document.getElementById('settingPowerRate');
+            const wRate = document.getElementById('settingWaterRate');
+
+            pRate.value = utilityRates.power;
+            wRate.value = utilityRates.water;
+
+            pRate.onchange = () => {
+                utilityRates.power = parseFloat(pRate.value) || 0;
+                localStorage.setItem('mb_utility_rates', JSON.stringify(utilityRates));
+                renderUtilities();
+            };
+
+            wRate.onchange = () => {
+                utilityRates.water = parseFloat(wRate.value) || 0;
+                localStorage.setItem('mb_utility_rates', JSON.stringify(utilityRates));
+                renderUtilities();
+            };
+        }
+    </script>
+</body>
+</html>
